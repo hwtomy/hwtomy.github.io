@@ -12,7 +12,7 @@ Email: tiou@kth.se
 M.Sc., Information and Internetwork Engineering, KTH Royal Institute of Technology, 2023—2026.\
 Exchange Program, Computer Science, EPFL, 2025—2025.\
 Exchange Program, Electrical and Electronics Engineering, EPFL, 2024—2025.\
-B.E., Electronic Information Engineering, Harbin Institute of Technology, 2019—2023.\
+B.E., Electronic Information Engineering, Harbin Institute of Technology, 2019—2023.
 
 #### Research Interests
 Interpretable Machine Learning, Signal Processing, Representation Learning, Implicit Continuous Models
