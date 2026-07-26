@@ -1,112 +1,1186 @@
-@import "./styles.css";
+/* ==========================================================================
+   Tiou Wang — academic homepage
+   Hand-written stylesheet. No framework, no build step, no @import and no
+   url() — this file itself references no external asset.
+   THE PAGE, however, is no longer external-request-free: <head> in index.html
+   requests two families from Google Fonts, and the sidebar's visitor badge is
+   an image served by mapmyvisitors.com. See README.md "Third-party requests".
+   Every colour lives in the :root block below; nothing outside it (except the
+   @media print override) may hard-code a colour value.
+   ========================================================================== */
 
+/* 1 — TOKENS ============================================================== */
 
-:root{
-    --h-title-color:#3948d2;
+:root {
+  color-scheme: light dark;
+
+  /* --- type stacks --------------------------------------------------------
+     TWO webfont families, no more. Requested in index.html <head> with
+     display=swap, non-render-blocking. Everything here must stay readable and
+     correctly laid out when fonts.googleapis.com never answers — which is the
+     state the site owner sees from China — so each family is backed by a real
+     fallback face, not a substitute. THE COLUMN GEOMETRY does not depend on a
+     webfont having loaded: the measure is em-based, every line box has an
+     explicit line-height, and no width anywhere is expressed in ch, so the
+     rails, the grid tracks, the measure and every rule position are identical
+     in both font states. What DOES differ is text advance width, and one place
+     that is load-bearing — see the masthead's wrap note in §4: Inter's strings
+     run about 4-6% wider than the Segoe UI / Arial fallback, which moved the
+     masthead's one-row / two-row threshold. §4 pins that threshold to a media
+     query so the row count is the same in both states and the font swap cannot
+     reflow the page after first paint.
+
+     Serif = body prose, publication entries, the display name.
+     Source Serif 4 is a variable face with a genuine optical-size axis, which
+     is used: this page runs it at 17/18px for prose and 30-36px for the name,
+     and `font-optical-sizing: auto` on <body> drives opsz from those sizes.
+     Fallbacks: macOS/iOS -> Charter or Iowan Old Style; Windows 10/11 ->
+     Sitka Text, then Palatino Linotype, then Georgia; Android/Linux ->
+     Noto Serif. Their x-heights sit within a few percent of Source Serif 4's,
+     so a swap shifts colour slightly but moves no line box. NO size-adjust
+     @font-face override is shipped: the mismatch is not large enough to
+     justify a synthetic face carrying numbers nobody will maintain. That is a
+     decision, not an oversight.
+     CJK faces are LAST so a Chinese-locale browser does not set Latin in a
+     CJK face; they exist only so pasted CJK does not render as tofu. */
+  --font-serif: "Source Serif 4", Charter, "Bitstream Charter",
+                "Iowan Old Style", "Sitka Text", Palatino, "Palatino Linotype",
+                Georgia, "Noto Serif", "Source Han Serif SC", "Songti SC", serif;
+  /* Sans = furniture only: masthead, nav, section labels, h3/h4 labels,
+     footer, the rail's affiliation lines, news dates, [arXiv]/[Project] links.
+     NEVER body prose.
+     Inter is chosen because its metrics sit close to Helvetica / Arial /
+     Segoe UI, so the fallback swap is nearly invisible, and because it is
+     drawn for small uppercase UI text with tracking — which is every place it
+     is used here. TWO weights are used: 600 for the brand, the nav, the
+     section labels, the h3/h4 labels and the news dates, and 400 — inherited
+     from <body> — for the rail's affiliation lines and links, the footer, the
+     noscript note, the empty-news line and the [arXiv]/[Project] links. The
+     axis range requested in index.html must COVER both. It once read
+     `wght@500..600`, which Google serves as `font-weight: 500 600`, so every
+     400 rule here was clamped up to 500 and drew a weight this file never
+     asks for. The clamp is silent; if a rule needs a weight outside the
+     requested range, widen the range in index.html.
+     The fallback deliberately does NOT start with `system-ui`: on
+     Chinese-locale Windows and macOS that resolves to a CJK-first face with
+     different Latin metrics. That reasoning is about the FALLBACK, which is
+     precisely the stack that runs when Google Fonts is blocked. */
+  --font-sans:  Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  /* No webfont is spent on mono. It is reachable only through a <code> span
+     that no contents/*.md currently writes; a font request for it would be
+     indefensible. */
+  --font-mono:  ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas,
+                "Liberation Mono", Menlo, monospace;
+
+  /* --- size scale. FIVE sizes total. Do not add a sixth. ----------------- */
+  --fs-name:  clamp(1.875rem, 1.5rem + 1.2vw, 2.25rem); /* 30px -> 36px cap.
+                              Lowered from 32->40: the name now lives in a
+                              247-307px rail, and "Tiou Wang" at 36px is about
+                              162px wide, so it holds one line at every rail
+                              width including the 247px worst case.          */
+  --fs-body:  1.0625rem;  /* 17px — body prose                               */
+  --fs-pub:   1rem;       /* 16px — publication entries (near body on purpose) */
+  --fs-small: 0.875rem;   /* 14px — footer, rail text                         */
+  --fs-micro: 0.8125rem;  /* 13px — nav, brand, section labels, h3/h4, pub links */
+
+  /* --- line heights ------------------------------------------------------ */
+  --lh-tight: 1.15;   /* display name          */
+  --lh-body:  1.65;   /* prose                 */
+  --lh-pub:   1.55;   /* publication entries   */
+  --lh-label: 1.4;    /* uppercase micro-labels */
+
+  /* --- 4px vertical grid. Block margins and padding come from this scale.
+         (A couple of inline paddings are em-based so they track font size.) -- */
+  --s-1:  0.25rem;  --s-2:  0.5rem;   --s-3:  0.75rem;  --s-4:  1rem;
+  --s-5:  1.25rem;  --s-6:  1.5rem;   --s-8:  2rem;     --s-10: 2.5rem;
+  --s-12: 3rem;     --s-16: 4rem;
+
+  /* --- layout ------------------------------------------------------------
+     The page is a centred SHEET on a darker shell. Inside the sheet:
+     masthead / two-column grid / footer.
+
+       --site-max  90rem = 1440px, the sheet
+       --rail-w    20rem = 320px below 75rem, 25rem = 400px at and above
+       --measure   33em on .section — `em`, so it resolves against --fs-body
+       --pad-x     20px below 35rem, 32px at and above
+
+     THE MEASURE ARITHMETIC, so the next editor does not re-derive it. Average
+     lowercase advance is 0.46-0.53 em across the serif stack (Source Serif 4
+     ~0.48, Charter ~0.487, Sitka Text ~0.49, Georgia ~0.505), so 33em is
+     62-72 characters and 1em of measure is about 2 characters.
+
+       vp     sheet  rail  content track  content inner  measure  chars
+       1920   1440   400   1038           918            594      62-72
+       1440   1440   400   1038           918            594      62-72
+       1366   1366   400    964           844            594      62-72
+       1200   1200   400    798           678            594      62-72
+       1199   1199   320    877           797            561      62-72
+       1024   1024   320    702           622            561      62-72
+        960    960   320    638           558            558      62-71
+        959    959    -       -           895            561      62-72
+        768    768    -       -           704            561      62-72
+        640    640    -       -           576            561      62-72
+        620    620    -       -           556            556      61-71
+        560    560    -       -           496            496      55-63
+        375    375    -       -           335            335      38-43
+
+     (sheet = min(vp, 1440); at >=60rem content track = sheet - rail - 2 sheet
+      borders; content inner = track - its two paddings.)
+
+     The `chars` column above is DERIVED. Measured in Chrome, counting the
+     characters on the first rendered line of the bio paragraph:
+        594px measure, Source Serif 4 loaded ......... 72
+        594px measure, Google Fonts BLOCKED .......... 64  (Sitka Text)
+        561px measure ................................ 64
+        374px (414px phone), 335px (375px phone) ..... 38
+        280px (320px phone) .......................... 34
+     So the real spread is 64-72 across both font states at every desktop and
+     tablet width — inside the 60-75 target — and the webfont failing to load
+     changes the character count but moves no box HERE: the measure, the rail
+     widths and the grid tracks are byte-identical in both runs. (Page HEIGHT
+     is not: fewer characters per line means more lines, so the blocked run is
+     a few dozen px longer. The one place a font-state difference used to move
+     a box sideways was the masthead's wrap threshold, and §4 now pins it.)
+
+     READ THIS HONESTLY: the measure holds 60-75 characters at every width down
+     to about 620px. Below that the VIEWPORT is the constraint, not the layout
+     — at 375px with 20px gutters the line box is 335px, and no single-column
+     design reaches 60 characters there without dropping type below a readable
+     floor. The phone figures are printed above so nobody re-derives them and
+     concludes the layout is broken.
+
+     The 960px row is why the grid turns on at 60rem with a 320px rail and not
+     the full 400px: at 960 the content inner is 558px (960 - 320 rail - 2
+     sheet borders - 40 - 40 padding; measured, and it matches the table row
+     above), three pixels under the 561px cap, so the track governs and the
+     measure is still 62-71 characters.
+     A 400px rail at 960 would leave 479px = 53-58 characters, under the floor.
+     Hence the two rail widths.
+
+     WHY `em` AND NOT `rem` FOR THE MEASURE: --fs-body steps 17px -> 18px at
+     75rem. An em cap scales with it, so the CHARACTER count is constant across
+     that step; a rem cap would silently widen the line to 66-76 characters.
+     It also means the cap tracks the FALLBACK face's size when the webfont
+     never arrives.
+
+     ONLY TWO STRUCTURAL BREAKPOINTS (60rem, 75rem), plus one padding step
+     (35rem) and one TYPE step in §4 (27rem, which pins the masthead's wrap so
+     the font swap cannot reflow it). Nothing else. Every media query in this
+     file is `(min-width: ...)` or its exact
+     complement `not all and (min-width: ...)`. `max-width:` MUST NOT APPEAR IN
+     ANY MEDIA QUERY HERE — a `max-width: 59.999rem` leaves a sliver of
+     viewport widths matched by neither query.                              */
+  --site-max: 90rem;     /* 1440px — the sheet. THE TRAILING MARGIN IS
+                            DELIBERATE AND MEASURED: at 1440 the content track
+                            is 1038px but the prose is capped at the 594px
+                            measure, so 389px of bare paper sits between the
+                            prose's right edge and the sheet's right edge (102px
+                            at 1024, 229px at 1280, 315px at 1366). That is the
+                            price of the wide sheet that was asked for, it is
+                            ordinary editorial trailing margin, and the
+                            compensation is that the brand, the name, the
+                            section labels and the prose all share one vertical
+                            spine. If it is ever unwanted, this is a ONE-TOKEN
+                            change: 80rem ends the sheet near the measure.
+                            Do NOT instead widen --measure; it is already at
+                            64-72 characters in both font states.             */
+  --rail-w:   20rem;     /* 320px band. 25rem at >=75rem. Below ~13rem a
+                            portrait and a news date both stop working.      */
+  --measure:  33em;      /* on .section; resolves against --fs-body          */
+  --pad-x:    1.25rem;   /* raised to 2rem at >=35rem                        */
+  --radius:   2px;
+
+  /* --- colour: ONE hue family, all of it pale. ---------------------------
+     STRATEGY, in one sentence: colour comes from AREA rather than from
+     saturation, hierarchy comes from ALPHA on one ink, and there is exactly
+     one accent.
+
+     WHICH SURFACES ACTUALLY CARRY THE COLOUR, measured on a rendered 1440x900
+     light page rather than assumed: --paper 69.9% of the viewport, --card
+     25.0%, --shell 0.0%. --shell is painted ONLY above --site-max, because
+     .sheet is min(viewport, 1440px) and fills the window at anything narrower.
+     So at every viewport up to 1440px the ramp a visitor sees is TWO steps
+     (paper, then the lighter rail), and the three-step version below appears
+     only on a wider-than-1440 monitor. Do not read the ramp as "the shell and
+     the paper are the two big surfaces" — an earlier revision said that and it
+     was true only of a narrower sheet. The blue that reads on a laptop is the
+     paper's, at chromaDelta 14 over ~70% of the screen.
+     RESIDUAL, stated rather than hidden: --card sits at chromaDelta 7, under
+     the ~12 threshold noted below, so the rail reads as near-white rather than
+     as tinted. That is a level decision, not a defect, and it is left at the
+     paler end on purpose because the brief for this ramp was "a little bluer".
+     IF MORE BLUE IS EVER WANTED, this is the lever, and the values are already
+     verified so it stays a two-token edit — MORE TINTED AREA AT THE SAME
+     LIGHTNESS, never more saturation in the accent:
+         --paper: #E6EEF9   L* 93.8, chromaDelta 19, hue 215
+         --card:  #F2F7FE   L* 97.0, chromaDelta 12, hue 215
+     With that pair the card/paper step is unchanged at 1.086:1, paper/shell
+     becomes 1.11:1, and every text token still clears its floor: --ink 14.95:1
+     on paper / 16.24:1 on card, --ink-70 5.97 / 6.27 (AA body), --ink-55
+     3.76 / 3.85 (>=3:1 non-text), --accent 7.58 / 8.23 (AAA). Changing them
+     means changing three other places with them: the two `theme-color` <meta>
+     tags in index.html, the badge's `co` parameter in index.html (it is set to
+     the --card value exactly), and every composited hex quoted below.
+
+     Three-step light ramp, darkest OUTSIDE the sheet — the reference this was
+     modelled on does the same in warm cream; this is the same lightness
+     architecture rotated to blue, with chroma raised only enough to be
+     visible. A hue shift of a pale ramp, not a saturation increase.
+       --paper on --shell   1.13:1
+       --card  on --paper   1.09:1
+       --card  on --shell   1.23:1
+     No dark band anywhere; nothing here is a filled panel.
+
+     EVERY GREY IS ONE INK AT A DIFFERENT ALPHA. Nothing below is a hardcoded
+     grey hex. The consequence worth knowing: the same token composites
+     differently on each ramp step and inherits that step's blue for free —
+     --ink-70 is #4E5663 over the shell, #535A65 over the paper and #565D66
+     over the card, from one declaration. The contrast figures below therefore
+     always quote the COMPOSITED colour against its own ground; "the ink at
+     100%" would be a meaningless number here.
+     Written as literal rgba(), not color-mix(), so there is no browser-support
+     question and the values are legible in devtools.
+
+     ONE THING ALPHA CANNOT DO: an alpha grey used as a BACKGROUND stacks if it
+     nests. --surface is the only background-valued alpha token, it is only
+     ever applied to <code> and <pre>, and `.prose pre code { background: none }`
+     in §6 is what stops the two grounds compounding. Keep that rule.
+
+     chromaDelta = max(R,G,B) - min(R,G,B); under ~12 at high lightness a
+     colour measures as grey on screen. Hues below are HSV degrees; every
+     non-neutral value in the sheet lands in 208-218, so "no red + green + blue
+     together" holds by construction rather than by restraint.              */
+  --shell: #D9E3F0;  /* OUTSIDE the sheet, the darkest step.
+                        L* 89.9, chromaDelta 23, hue 214                     */
+  --paper: #EAF0F8;  /* the sheet and the content column.
+                        L* 94.6, chromaDelta 14, hue 214. 1.13:1 on --shell  */
+  --card:  #F6F9FD;  /* the rails, the LIGHTEST step.
+                        L* 97.8, chromaDelta 7, hue 214. 1.09:1 on --paper   */
+
+  /* Ink source, stated once: rgb(18,26,38) = #121A26, hue 216. Change this
+     one triple and the entire grey ramp re-tints on every surface. */
+  --ink:     rgb(18, 26, 38);          /* on --paper #121A26 15.25:1 | on --card 16.55:1
+                                          (AAA both). Prose, the display name,
+                                          <strong>, section labels.          */
+  --ink-70:  rgba(18, 26, 38, 0.70);   /* on --paper #535A65  6.07:1 | on --card #565D66 6.31:1
+                                          AA body / AAA large on both. ALL
+                                          furniture text.                    */
+  --ink-55:  rgba(18, 26, 38, 0.55);   /* on --paper #737A84  3.78:1 | on --card #797E87 3.86:1
+                                          >=3:1 — LARGE TEXT AND NON-TEXT
+                                          ONLY. Used solely as
+                                          text-decoration-color. NEVER body.  */
+  --rule-hi: rgba(18, 26, 38, 0.20);   /* on --paper #BFC5CE  1.51:1 | on --card #C8CCD2 1.53:1
+                                          DECORATIVE. Sheet borders, masthead
+                                          rule, rail rule.                   */
+  --rule:    rgba(18, 26, 38, 0.12);   /* on --paper #D0D6DF  1.28:1 | on --card #DBDEE3 1.28:1
+                                          DECORATIVE. Section dividers, table
+                                          rules, footer rule, blockquote bar. */
+  --surface: rgba(18, 26, 38, 0.055);  /* on --paper #DEE4EC  1.12:1 | on --card #E9EDF1 1.11:1
+                                          <code>/<pre> ground ONLY, never a
+                                          section band. --ink on it: 13.66:1  */
+
+  --accent:      #0F4C81;                  /* 7.73:1 on --paper | 8.39:1 on --card |
+                                              6.83:1 on --shell — AAA on all three.
+                                              chromaDelta 114, hue 208. This is KTH
+                                              Blue #004791 nudged 3 degrees toward the
+                                              ramp's hue and down 21% in chromaDelta,
+                                              so it is measurably closer to the family
+                                              while reading as the same institutional
+                                              blue. Links, focus ring, badge ink.
+                                              If a border ever has to CARRY MEANING
+                                              (>=3:1 on both grounds) the value in
+                                              this family that qualifies is #5589B8 —
+                                              verify before use.                    */
+  --accent-wash: rgba(15, 76, 129, 0.20);  /* ::selection ONLY. Composites to #BECFE0
+                                              on --paper and #C8D6E4 on --card;
+                                              --ink on those is 10.98:1 and 11.81:1
+                                              (AAA). A filled --accent selection was
+                                              the one place this page painted a
+                                              saturated 8:1 AREA, which contradicted
+                                              "all colours light"; a 20% wash of the
+                                              same ink is still unmistakably a
+                                              selection and is still pale.          */
+
+  /* Five alpha steps, not six. The reference declares --ink-40 and --ink-25 as
+     well; over this paper they measure 2.47:1 and 1.70:1, below the 3:1
+     non-text floor, so they could only ever be decorative — and --rule-hi
+     already holds that job. A token whose only legal use duplicates another
+     token is how a palette rots. */
 }
 
-.header {
-    border-bottom: solid 2px var(--bs-blue);
-    z-index: 10000;
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Same architecture, same ordering (rail lightest), re-picked on the same
+       hue axis — never inverted. Only the ink triple and the three ramp steps
+       change; the six alpha constants are IDENTICAL in both schemes, so the
+       two schemes cannot drift apart the way independent hexes could.
+         --paper on --shell   1.10:1
+         --card  on --paper   1.27:1
+         --card  on --shell   1.39:1
+       THE DARK BAND STEP IS DELIBERATELY LARGER THAN LIGHT'S 1.09. A previous
+       revision shipped 1.145:1 and a reviewer measured it as reading close to
+       a plain grey page. Candidates computed against #11151C were #1C222C
+       1.145 (the failing value), #1E2530 1.187, #202834 1.232, #222A36 1.265,
+       #242C39 1.302. #222A36 is chosen because it clears the 1.257 target, it
+       is the lowest candidate whose chromaDelta (20) matches the light shell's
+       visible-blue threshold, and because a luminance step of a given RATIO
+       reads quieter at low luminance — the inverse of the assumption behind
+       the failing 1.145. */
+    --shell: #06080B;   /* L*  2.1, chromaDelta  5, hue 216                  */
+    --paper: #11151C;   /* L*  6.7, chromaDelta 11, hue 218                  */
+    --card:  #222A36;   /* L* 16.8, chromaDelta 20, hue 216                  */
+
+    /* Ink source: rgb(232,236,243) = #E8ECF3, hue 218. */
+    --ink:     rgb(232, 236, 243);         /* paper 15.44:1 | card 12.20:1 (AAA)   */
+    --ink-70:  rgba(232, 236, 243, 0.70);  /* #A7ACB2 8.00:1 | #ADB2BA 6.78:1 (AAA
+                                              / AAA-large)                         */
+    --ink-55:  rgba(232, 236, 243, 0.55);  /* #878B92 5.35:1 | #8F959E 4.79:1. It
+                                              clears AA body here, but its ROLE
+                                              stays restricted to match light.     */
+    --rule-hi: rgba(232, 236, 243, 0.20);  /* #3C4047 1.76:1 | #4A515C 1.81:1
+                                              DECORATIVE                           */
+    --rule:    rgba(232, 236, 243, 0.12);  /* #2B2F36 1.36:1 | #3A414D 1.41:1
+                                              DECORATIVE                           */
+    --surface: rgba(232, 236, 243, 0.07);  /* #20242B 1.17:1 | #303843 1.22:1.
+                                              --ink on it: 13.14:1                 */
+
+    --accent:      #93BEEA;                  /* 9.40:1 on --paper | 7.43:1 on --card
+                                                | 10.31:1 on --shell. AAA
+                                                everywhere. chromaDelta 87,
+                                                hue 210.                          */
+    --accent-wash: rgba(147, 190, 234, 0.28);/* #354456 on paper (--ink 8.39:1),
+                                                #425368 on card (--ink 6.64:1)     */
+  }
 }
 
-.bg-bottom {
-    background-color: var(--h-title-color);
+@media (min-width: 35rem) { :root { --pad-x: 2rem; } }
+@media (min-width: 75rem) { :root { --rail-w: 25rem; --fs-body: 1.125rem; } }
+
+
+/* 2 — RESET =============================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--shell);        /* the sheet supplies --paper             */
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  /* The mechanism that justifies requesting Source Serif 4's opsz axis at
+     all: the browser drives the optical-size axis from the rendered size, so
+     the 30-36px display name and the 17-18px prose get genuinely different
+     drawings from one variable file. `auto` is the initial value; it is
+     written out so the axis request in <head> is traceable to a use. */
+  font-optical-sizing: auto;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.top-section {
-    position: relative;
-    padding: 10rem 0;
-    background-position: center;
-    background-size: cover;
-    height: 25rem;
-}
+/* The only <img> the page can ship is the sidebar portrait (commented out)
+   and the visitor badge; both get explicit rules in §10. NO display:block
+   here — an image a future .md puts inside a paragraph must stay inline. */
+img { max-width: 100%; height: auto; }
 
-.top-section h2 {
-    font-weight: 400;
-}
+h1, h2, h3, h4, h5, h6, p, ul, ol, figure, blockquote { margin: 0; }
 
-.top-section .top-section-content {
-    position: relative;
-    z-index: 1;
-}
+a { color: inherit; }
 
-.top-section:before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-}
+/* Do NOT add `ul { list-style: none }` or `ul, ol { padding: 0 }` here.
+   List-stripping is scoped to `.pubs ul` in §7 and `.news ul` in §10. A global
+   rule would silently render the first bulleted list written in home.md as
+   flush unmarked lines. */
 
-section header h2{
-    font-family: "Kanit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !important;
-    color: var(--h-title-color);
-    font-size: 2.3rem;
-    line-height: 4rem;
-}
-
-section .main-body{
-    font-size: 1.3rem;
-    font-weight: 200;
-    line-height: 2.4rem;
-}
-
-
-.bg-gradient-primary-to-secondary-light {
-    background: linear-gradient(45deg, #fcfcfc, #ffffff) !important;
-}
-
-.bg-gradient-primary-to-secondary-gray {
-    background: linear-gradient(45deg, #f0f0f0, #f1f1f1) !important;
-}
-
-
-
-.on-top {
-    position: relative;
-    z-index: 10000;
-}
-
-.top-bg {
-    background-position: center;
-    background-size: fill;
-    width: 100%;
-    height: 100%;
-}
-
-.top-bg::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.4);
-}
-
-
-#avatar {
-    position: relative;
-    height: 0;
-    top:min(-65px,max(-100px,calc(-1*100vw/12)));
-    max-width: 55em;
-    margin: 0 1.5rem 0 0;
-    float: right;
-    z-index: 9000;
-}
-
-#avatar img {
-    height: max(130px,min(200px,calc(100vw/6)));
-    box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.2);
-}
-
-@media screen and (max-width: 991px) {
-    #avatar {
-        margin: 0;
-    }
+/* Retained utility. No element uses it today — the About heading it used to
+   hide is now visible — but removing a general-purpose helper is a trap for
+   the next editor, so it stays. */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
+  white-space: nowrap; border: 0;
 }
 
 
+/* 3 — PAGE FRAME, LAYOUT AND SECTIONS ===================================== */
+
+/* THE SHEET. Everything visible lives inside it; <body> shows --shell only in
+   the margins above 1440px.
+   THE HAIRLINE LEFT/RIGHT BORDERS ARE DRAWN FROM 60rem UP, NOT FROM 90rem, and
+   that is deliberate even though the shell they separate from only appears
+   above --site-max. Two reasons, in order:
+     - they are part of the sheet's BOX. The measure table above subtracts "2
+       sheet borders" at every grid width; making the border appear only above
+       90rem would move the content track by 2px at 1366, 1200, 1024 and 960 —
+       i.e. it would silently invalidate eight rows of that table and change
+       the 960px worst case from 558px to 560px. Holding the box constant
+       across the whole grid range is worth more than removing a hairline;
+     - between 60rem and 90rem the border sits flush against the viewport edge
+       with the shell behind it hidden, so it reads as a faint 1px frame on the
+       window edge (#BFC5CE, 1.51:1 on the paper it composites over). That is
+       cosmetically inert, and it is what the reference site this layout was
+       modelled on does too — its sheet is also min(viewport, 1440px) with
+       permanent side borders.
+   Below 60rem they DO come off: the layout is stacked there, the rails run
+   edge to edge, and a hairline beside a full-bleed band is a stray line rather
+   than an edge cue.
+   min-height: 100svh so a short page still fills a phone screen under a
+   retracting URL bar; the 100vh line before it is the fallback for engines
+   without svh. */
+.sheet {
+  max-width: var(--site-max);
+  margin-inline: auto;
+  background: var(--paper);
+  border-inline: 1px solid var(--rule-hi);   /* 1.34:1 against --shell —
+                                                DECORATIVE, an edge cue only  */
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+@media not all and (min-width: 60rem) { .sheet { border-inline: 0; } }
+
+/* .container is now ONLY the masthead's and the footer's inner box: it
+   supplies horizontal padding and nothing else. The sheet supplies the outer
+   cap, so there is no max-width and no auto margin here any more. */
+.container { padding-inline: var(--pad-x); }
+
+/* THE MASTHEAD AND FOOTER RULES ARE DRAWN ON THE ELEMENT, NOT ON .container.
+   The previous build drew them on the inner box and then had to shrink that
+   box to the frame's content width inside a media query so the rule would
+   start on the band's left edge and not leave a stub. Drawing them on the
+   full-sheet-width element instead gets the same alignment with no
+   arithmetic, at every viewport, with no media query — and it terminates the
+   rail's tint at both ends with no possible stub, which is what the review
+   finding about the 48-64rem slab was really asking for. */
+.masthead    { border-bottom: 1px solid var(--rule-hi); }  /* 1.51:1 DECORATIVE */
+.site-footer { border-top:    1px solid var(--rule);    }  /* 1.28:1 DECORATIVE */
+
+/* STACKED (<60rem): a plain flex column following DOM order —
+   rail--id, content, rail--meta. No `order:` property, no *-reverse, anywhere
+   in this file, deliberately: those desynchronise reading order from visual
+   order. The identity block leads the DOM, so the first screen of a phone is
+   the person, and the empty News band is the last thing on the page. */
+.layout { flex: 1 1 auto; display: flex; flex-direction: column; }
+
+.rail--id   { padding-inline: var(--pad-x); padding-block: var(--s-10) var(--s-8); }
+.content    { padding-inline: var(--pad-x); padding-block: var(--s-10) var(--s-12); }
+.rail--meta { padding-inline: var(--pad-x); padding-block: var(--s-8) var(--s-10); }
+
+@media (min-width: 60rem) {
+  /* THE GRID. Three direct children of <main> = three regions.
+       row 1 = auto      -> .rail--id's own height
+       row 2 = 1fr       -> .rail--meta always stretches to the bottom of
+                            whichever column is taller
+       .content spans both rows in column 2.
+     Row 2 being 1fr is the structural reason the band always reaches the
+     footer rule: it replaces the previous build's reliance on `align-items:
+     stretch` and on the sidebar happening to be the taller column. It also
+     means capping the band's height could only ever CLIP, never save space.
+     DO NOT ADD `align-items: start` — it would collapse the band to its
+     content and leave a floating bottom edge.
+     There is NO column-gap. The gutter is made of paddings: rail right pad +
+     the 1px rail rule + content left pad = 32+1+40 = 73px below 75rem and
+     36+1+56 = 93px above it. Building it from paddings rather than a gap is
+     what lets the tint run right up to the gutter instead of stopping short. */
+  .layout {
+    display: grid;
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    column-gap: 0;
+  }
+  .rail--id   { grid-column: 1; grid-row: 1; }
+  .rail--meta { grid-column: 1; grid-row: 2; }
+  .content    { grid-column: 2; grid-row: 1 / span 2; }
+
+  .rail--id   { padding: var(--s-12) var(--s-8) var(--s-8) var(--s-10); }
+  .rail--meta { padding: 0 var(--s-8) var(--s-12) var(--s-10); }
+  .content    { padding: var(--s-12) var(--s-10) var(--s-16); }
+  .masthead > .container,
+  .site-footer > .container { padding-inline: var(--s-10); }
+}
+
+@media (min-width: 75rem) {
+  .rail--id   { padding: 3.5rem 2.25rem 2rem 3.5rem; }   /* 56 36 32 56 */
+  .rail--meta { padding: 0 2.25rem 3.5rem 3.5rem; }      /*  0 36 56 56 */
+  .content    { padding: 3.5rem 4rem 4rem 3.5rem; }      /* 56 64 64 56 */
+  .masthead > .container,
+  .site-footer > .container { padding-inline: 3.5rem 4rem; }
+}
+
+/* THE MEASURE. `em` resolves against --fs-body (see §1), so the CHARACTER
+   count stays constant across the 17px -> 18px step at 75rem. Nothing may set
+   `font-size` on .section itself, or the measure silently changes. */
+.section { max-width: var(--measure); }
+
+/* The divider spans the measure, which is correct: its job is to separate two
+   text blocks, not to bracket the rail. Bracketing the rail is the masthead
+   rule's and the footer rule's job, and they now span the whole sheet. */
+.section + .section {
+  margin-top: var(--s-12);
+  padding-top: var(--s-12);
+  border-top: 1px solid var(--rule);   /* 1.28:1 — DECORATIVE */
+}
+
+section[id] { scroll-margin-top: var(--s-8); }
+
+/* Shown only inside <noscript>, i.e. never when the page is working. Set in
+   the furniture sans at label size so it reads as a system notice rather than
+   as part of the prose. The sections below it render empty in that state —
+   sparse but not broken, and not worth a no-js class and its own failure mode
+   to tidy up a case the note already explains. */
+.noscript-note {
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+  color: var(--ink-70);            /* 6.07:1 on --paper (AA body)            */
+}
+
+
+/* 4 — MASTHEAD ============================================================ */
+/* Static running head. Not fixed, not sticky. There is no hamburger:
+   `flex-wrap: wrap` IS the mobile nav.
+
+   COLLAPSE WIDTH, derived rather than quoted so it self-corrects when a nav
+   link is added. Measured widths at 13px/600: the brand "TIOU WANG" at 0.10em
+   tracking is 88.2px in Inter and 85.1px in the Segoe UI fallback; the nav
+   ("HOME" + "PUBLICATIONS" + "CV (PDF)" at 0.07em with two 20px gaps) is
+   254.5px in Inter and 240.5px in the fallback. Add the 24px column gap and
+   the 2 x 20px gutters and the row needs 406.7px of viewport in Inter, 389.6px
+   in the fallback. So the natural threshold DIFFERS BY FONT STATE — 408px
+   loaded, 390px blocked — and since the font stylesheet is loaded
+   non-render-blocking, a phone between those two widths would paint a two-row
+   masthead and then snap to one row 29.5px shorter when Inter arrived, moving
+   every box on the page up. iPhone 12/13/14/15 (390px) and Pixel 7/8 (393px)
+   sit squarely in that band.
+
+   THE MEDIA QUERY BELOW IS WHAT REMOVES THAT SHIFT. Forcing the nav onto its
+   own row under 27rem (432px) makes the row count font-INDEPENDENT: two rows
+   below 432px in both states, one row above it in both states (Inter needs
+   407px, the fallback 390px, so 432px clears both with margin). The cost is
+   that a fallback-only phone between 390 and 431px now gets the two-row
+   masthead it would otherwise have escaped — a stable layout in exchange for a
+   row of height. If a nav link is added, re-measure and raise the 27rem.
+   This holds cleanly up to about five nav items. */
+
+.masthead > .container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-6);
+  padding-block: var(--s-6) var(--s-3);
+}
+
+.masthead__brand {
+  display: inline-block;
+  min-height: 1.2em;               /* holds height before config.yml lands */
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--ink);               /* 15.25:1 on --paper (AAA) */
+  text-decoration: none;
+  /* Same 24px-target reason as `.masthead__nav a` below, and it is a link in
+     the same row: 13px type alone gives a 21.4px-tall hit area, under WCAG 2.2
+     SC 2.5.8. The padding grows it to 29.4px and the matching negative margin
+     cancels it in layout, so the masthead row height is unchanged. Leaving
+     this one link short relied on the SC's undocumented spacing exception,
+     which stops holding the moment the brand gains a neighbour. */
+  padding-block: var(--s-1);
+  margin-block: calc(-1 * var(--s-1));
+}
+
+.masthead__nav { display: flex; flex-wrap: wrap; gap: var(--s-5); }
+
+/* Font-state-independent wrap; see the derivation above. `not all and
+   (min-width: ...)` rather than `max-width:` — the exact complement, so no
+   viewport width is matched by neither query (§1). This is the file's only
+   breakpoint outside the two structural ones and the 35rem padding step, and
+   it is a TYPE breakpoint, not a layout one. */
+@media not all and (min-width: 27rem) {
+  .masthead__nav { flex-basis: 100%; }
+}
+
+.masthead__nav a {
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-70);            /* 6.07:1 on --paper (AA body) */
+  text-decoration: none;
+  /* 13px type gives a ~21px-tall hit area, under the 24px minimum of WCAG 2.2
+     SC 2.5.8. The padding grows the target to ~29px; the matching negative
+     margin cancels it in layout, so the masthead row height is unchanged
+     (these are flex items, so vertical padding would otherwise push it out). */
+  padding-block: var(--s-1);
+  margin-block: calc(-1 * var(--s-1));
+  transition: color 120ms ease;
+}
+
+.masthead__nav a:hover,
+.masthead__nav a:focus-visible { color: var(--accent); }
+
+@media (min-width: 35rem) {
+  .masthead > .container { padding-block: var(--s-8) var(--s-4); }
+}
+
+
+/* 5 — DISPLAY NAME ======================================================== */
+/* Weight 400, not bold. It is the only large type on the page and needs no
+   extra weight to win.
+   It is the SECOND element of `.rail--id`, directly under the photo slot — the
+   name and the portrait now DO share a column, which is the point of moving
+   the identity into the rail. (An earlier revision put the name in the content
+   column and asserted the opposite; that comment is gone with the layout it
+   described.) The bottom margin is tight because this is the head of a compact
+   identity block, not the top of a page. */
+
+.name {
+  min-height: 1.15em;              /* holds height before config.yml lands */
+  font-family: var(--font-serif);
+  font-size: var(--fs-name);
+  font-weight: 400;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
+  color: var(--ink);               /* 16.55:1 on --card (AAA) */
+  margin-bottom: var(--s-4);
+}
+
+
+/* 6 — PROSE (the injected markdown) ======================================= */
+
+/* A long unbreakable token — a bare URL or a DOI pasted into a .md — must
+   break rather than push the whole page sideways. */
+.prose { overflow-wrap: break-word; }
+
+.prose > * + * { margin-top: var(--s-4); }
+
+/* contents/*.md use `####`; scripts.js clamps injected headings to h3 so the
+   outline under each section's <h2> does not skip a level. h4 is styled
+   identically anyway — DO NOT drop the h4 selector, it still catches
+   hand-written <h4> in the raw HTML that marked passes through. */
+.section-label,
+.side-label,
+.prose h3,
+.prose h4 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: var(--lh-label);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-70);            /* 6.07:1 on --paper / 6.31:1 on --card */
+}
+
+.prose > h3, .prose > h4 { margin-top: var(--s-8); margin-bottom: var(--s-2); }
+
+/* The section title and the `####` sub-headings inside it share every property
+   except colour, and the separation is now LIGHTNESS WITHIN ONE INK — --ink
+   at 15.25:1 for "PUBLICATIONS" against --ink-70 at 6.07:1 for the "ACCEPTED"
+   directly beneath it. A previous revision bought the same separation by
+   introducing a second hue (a dark navy --label token); that is exactly what
+   makes a palette incoherent, because a second hex has to be re-tuned by hand
+   every time a background moves. One ink, two alphas, no second hue. */
+.section-label { color: var(--ink); margin-bottom: var(--s-6); }
+
+/* Fallback so a future ## or ### or ##### does not fall through to UA defaults
+   (which would render it as 24px bold Times against a serif body). */
+.prose h1, .prose h2, .prose h5, .prose h6 {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);               /* 15.25:1 on --paper (AAA) */
+}
+
+.prose > h1, .prose > h2, .prose > h5, .prose > h6 {
+  margin-top: var(--s-8); margin-bottom: var(--s-2);
+}
+
+.prose ul, .prose ol { padding-left: var(--s-5); }
+.prose li + li { margin-top: var(--s-2); }
+
+/* 600, not the UA's 700. Source Serif 4 is requested from Google Fonts as
+   `wght@400..600`, and Google serves that with the descriptor
+   `font-weight: 400 600`, so a `**bold**` run left at the UA default would be
+   CLAMPED down to 600 silently — the declared weight and the drawn weight
+   would disagree, which is the trap the §1 note about Inter's old 500..600
+   range describes. Declaring 600 makes them agree. Matches `.pubs strong`
+   in §7. If a genuine 700 is ever wanted, widen the axis range in index.html
+   first; the clamp gives no warning. */
+.prose strong { font-weight: 600; }
+
+.prose a {
+  color: var(--accent);            /* 7.73:1 on --paper (AAA) */
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  /* --ink-55, not --rule-hi: the underline is the non-colour cue that
+     distinguishes a link from body prose (WCAG 1.4.1), so it has to clear the
+     3:1 non-text floor. --ink-55 measures 3.78:1 on --paper; --rule-hi is a
+     1.51:1 decorative hairline and would not qualify. It still reads quieter
+     than the link text and still darkens on hover. */
+  text-decoration-color: var(--ink-55);
+  transition: color 120ms ease, text-decoration-color 120ms ease;
+}
+
+.prose a:hover,
+.prose a:focus-visible { text-decoration-color: currentColor; }
+
+.prose code, .prose kbd, .prose samp {
+  font-family: var(--font-mono); font-size: 0.9em;
+  background: var(--surface); padding: 0.1em 0.3em; border-radius: var(--radius);
+}
+
+.prose pre {
+  background: var(--surface); padding: var(--s-4);
+  border-radius: var(--radius); overflow-x: auto;
+}
+
+/* LOAD-BEARING, not cosmetic. --surface is an ALPHA value, so a <code> inside
+   a <pre> would composite its ground on top of the <pre>'s and produce a
+   visibly darker inner block. Keep this rule. */
+.prose pre code { background: none; padding: 0; }
+
+.prose blockquote {
+  border-left: 2px solid var(--rule); padding-left: var(--s-4);
+  color: var(--ink-70);            /* 6.07:1 on --paper (AA body) */
+}
+
+/* `display: block` + `overflow-x: auto` is the no-wrapper way to stop a wide
+   table overflowing the page: marked emits a bare <table> with nothing around
+   it, so the scroll container has to be the table itself. */
+.prose table {
+  display: block; width: 100%; overflow-x: auto;
+  border-collapse: collapse; font-size: var(--fs-pub);
+}
+
+.prose th, .prose td {
+  border-bottom: 1px solid var(--rule);
+  padding: var(--s-2) var(--s-3) var(--s-2) 0; text-align: left;
+}
+
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin-block: var(--s-8); }
+
+
+/* 7 — PUBLICATIONS ======================================================== */
+/* THIS SECTION MUST STAY AFTER §6. #publications-md carries class="prose pubs";
+   `.prose a` and `.pubs a` have identical specificity (0,1,1), so source order
+   decides. If §7 preceded §6 the publication links would take a resting
+   underline and the wrong font. §10 MUST ALSO COME AFTER §6, for the same kind
+   of reason: `.side-label` overrides the colour set by §6's shared label list.
+
+   Publication entries run at --fs-pub (16px) inside the same 33em box, so they
+   measure 594/16 = 37em = 70-80 characters — wider than the prose above them.
+   That is deliberate: a bibliography line is scanned by eye against a hanging
+   indent, not read as running text. */
+
+.pubs ul { list-style: none; padding-left: 0; margin: 0; }
+
+.pubs li {
+  font-size: var(--fs-pub);
+  line-height: var(--lh-pub);
+  padding-left: var(--s-6);
+  text-indent: calc(-1 * var(--s-6));   /* true hanging indent, bibliography form */
+  break-inside: avoid;
+}
+
+.pubs li + li { margin-top: var(--s-5); }
+
+/* publications.md contains TWO <strong> runs per entry — the author self-
+   highlight and the venue. Style them identically. Do NOT use
+   `li > strong:first-child` / `:not(:first-child)` to italicise the venue: it
+   inverts silently the first time an entry does not lead with the owner's
+   name, i.e. the first time he is not first author. (Italics are also not
+   requested from Google Fonts — see the note in index.html's <head>.) */
+.pubs strong { font-weight: 600; color: var(--ink); }  /* 15.25:1 on --paper (AAA) */
+
+/* `[[arXiv]](url)` renders as <a>[arXiv]</a> — the square brackets are the link
+   TEXT, already in the DOM. Never synthesise them with ::before/::after, and
+   never try to strip them. The brackets are the non-colour affordance that
+   satisfies WCAG 1.4.1, which is why these links carry no resting underline. */
+.pubs a {
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  color: var(--accent);            /* 7.73:1 on --paper (AAA) */
+  text-decoration: none;
+  /* NOT `white-space: nowrap`. `[arXiv]` and `[Project]` hold one line on their
+     own — they contain no break opportunity — but nowrap also applies to the
+     bare URL or long DOI that a future entry may carry, and an unbreakable
+     700px word scrolls the entire page sideways on a phone. */
+  overflow-wrap: anywhere;
+  /* Same 24px hit-area reason as .masthead__nav a. These are inline, so
+     vertical padding grows the target without touching the line box; no
+     compensating negative margin is needed. */
+  padding-block: var(--s-1);
+  transition: color 120ms ease;
+}
+
+.pubs a:hover, .pubs a:focus-visible {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+
+/* 8 — FOOTER ============================================================== */
+/* The rule itself is on `.site-footer` (§3), so it spans the whole sheet and
+   terminates the foot of the rail band as well as the prose. */
+
+.site-footer > .container {
+  padding-block: var(--s-8) var(--s-16);
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  color: var(--ink-70);            /* 6.07:1 on --paper (AA body) */
+}
+
+#copyright-text { min-height: 1.5em; margin-bottom: var(--s-2); }
+
+/* Semantic hook for the footer's link row. Family, size and colour all come
+   from `.site-footer > .container`, so this needs nothing else — but the
+   selector is defined so that every class used in index.html resolves to a
+   rule in this stylesheet, and so a future editor has an obvious place to hang
+   link-row styling. The margin re-asserts the reset for this element. */
+.site-footer__links { margin: 0; }
+
+.site-footer a {
+  color: var(--ink-70); text-decoration: none; transition: color 120ms ease;
+  padding-block: var(--s-1);   /* 24px hit area, as above; inline, so no reflow */
+}
+
+.site-footer a:hover, .site-footer a:focus-visible {
+  color: var(--accent); text-decoration: underline; text-underline-offset: 0.18em;
+}
+
+/* --ink-70, not --rule-hi: this is a rendered glyph, and --rule-hi is a 1.51:1
+   hairline value reserved for non-text. At 1.51:1 the separator simply is not
+   there, which leaves the two links reading as one ambiguous gap. */
+.site-footer .sep { margin-inline: var(--s-2); color: var(--ink-70); }
+
+
+/* 9 — FOCUS, SELECTION, MOTION =========================================== */
+/* :focus-visible is not optional — the Bootstrap stylesheet that used to
+   supply focus rings has been removed. Never write `outline: none` here.
+   The ring is --accent: 7.73:1 on --paper, 8.39:1 on --card and 6.83:1 on
+   --shell in light; 9.40 / 7.43 / 10.31 in dark. Far past the 3:1 non-text
+   minimum on every ground it can land on. */
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* A WASH, not a fill. --accent-wash composites to #BECFE0 on --paper and
+   #C8D6E4 on --card, and --ink on those measures 10.98:1 and 11.81:1 (AAA).
+   A filled `background: var(--accent)` was the single place this page painted
+   a saturated area, which is the one thing the palette rule forbids. */
+::selection { background: var(--accent-wash); color: var(--ink); }
+
+/* Smooth scrolling, previously inherited from the removed Bootstrap stylesheet. */
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* 10 — RAILS: BAND, PHOTO SLOT, IDENTITY, NEWS, TRACKER =================== */
+/* ONE visual band made of TWO elements, so the DOM can put the content column
+   between them: `.rail--id` (photo slot, name, affiliation, links) comes
+   first, `.content` second, `.rail--meta` (News, visitor badge) third. At
+   >=60rem grid placement draws both rails in column 1 and the seam is
+   invisible — `.rail--id` carries the bottom padding, `.rail--meta` carries
+   none on top, and grid row 2 is 1fr so the band runs unbroken from the
+   masthead rule to the footer rule. Flat fill only: no gradient, no shadow, no
+   radius. A gradient or a radius turns a field into a widget; a shadow is
+   black, and every colour on this page has to stay pale.
+   MUST come after §6: .side-label overrides the shared label colour there.
+
+   NO STICKY BOX, NO max-height, NO overflow, ANYWHERE IN THIS SECTION.
+   That is a decision, not an omission. An earlier revision made the band's
+   inner box sticky with `max-height: calc(100svh - 4rem); overflow-y: auto`
+   and capped #news-md at 24rem when stacked. Five reasons not to bring either
+   back:
+     - with the photo slot filled and News still EMPTY, `.rail--id` alone
+       measures 550px tall at >=1200 (measured; 334px with the slot empty, so
+       the photo costs exactly 216px). On a stock 1366x768 laptop the viewport
+       cap resolved below that and clipped the block's own content while
+       several hundred px of unused tint sat below it. Filling the photo slot
+       is documented as a change where "nothing else moves", and that has to
+       stay true;
+     - the clipped edge landed on flat tint behind an overlay scrollbar that is
+       invisible until it is touched, so truncation read as a rendering bug;
+     - `overscroll-behavior: contain` stopped a wheel or a swipe over the band
+       from chaining to the page;
+     - a scroll container with no focusable descendant is not reachable by
+       keyboard in every engine, so the overflow was a genuine A11y hole;
+     - grid row 2 is `1fr`, so the band's height is already driven by whichever
+       column is TALLER. A cap could therefore only ever clip; it could never
+       save vertical space.
+   The rails are ordinary grid items in a document that scrolls normally. A
+   long News list lengthens the page, which is what a document should do.
+   Keeping the list short is EDITORIAL, not technical, and contents/news.md
+   carries the convention and an archive comment for it.
+
+   BAND GEOMETRY, for anyone sizing content for it:
+     >=75rem  track 400px, inner width 400 - 1 (rule) - 56 (left pad)
+                                          - 36 (right pad) = 307px
+     60-75rem track 320px, inner 320 - 1 - 40 - 32 = 247px  (the worst case)
+     stacked  inner = viewport - 2 x --pad-x; 335px at 375px, 704px at 768px
+
+   HOW EMPTY THE BAND IS IN THE STATE IT SHIPS IN, measured rather than
+   estimated, at 1440x900 with News empty and the photo slot off: the band runs
+   from the masthead rule to the footer rule (863.7px tall) and holds 236px of
+   content — the News heading and its empty-state line at the top, the visitor
+   badge pinned to the foot — leaving 571.5px of unbroken tint between them.
+   That is a consequence of grid row 2 being `1fr` and is not fixable in CSS:
+   the band is guaranteed to reach the footer whatever it holds, and the badge
+   at the foot is what stops it trailing off rather than terminating. The two
+   levers, both EDITORIAL and both the owner's to pull, are (a) put a second
+   object near the top of the band — the Research Interests keyword line or the
+   Education dates from contents/home.md are the natural candidates — or (b)
+   write some news. Do NOT answer it with CSS: capping, centring or
+   `align-items: start` on the band each reintroduce a defect listed above. */
+
+.rail { background: var(--card); }
+
+/* Stacked: the band has no side neighbour, so the edges that do work are the
+   horizontal ones. 1.28:1 — DECORATIVE; the real separation is the 1.09:1 tint
+   step plus the padding. The footer's own rule already closes the bottom of
+   .rail--meta, so no border-bottom is drawn there. */
+@media not all and (min-width: 60rem) {
+  .rail--id   { border-bottom: 1px solid var(--rule); }
+  .rail--meta { border-top:    1px solid var(--rule); }
+}
+
+@media (min-width: 60rem) {
+  /* DECORATIVE. The band's boundary is carried by the 1.09:1 tint step plus
+     73-93px of gutter, never by this line.
+     RATIOS, quoted against BOTH grounds because this border sits between them:
+     the element's own background paints under its border area, so --rule-hi
+     composites over --card, not over --paper, giving #C8CCD2 — 1.53:1 against
+     the --card behind it and 1.41:1 against the --paper it abuts. (An earlier
+     revision quoted 1.51:1 here, which is the --paper composite #BFC5CE, i.e.
+     the one ground this line never touches.) Dark: #4A515C, 1.81:1 on --card
+     and 2.28:1 on --paper. */
+  .rail       { border-inline-end: 1px solid var(--rule-hi); }
+  .rail--id   { border-bottom: 0; }
+  .rail--meta { border-top: 0; }
+}
+
+/* margin-top:auto on .side-tracker needs a flex column to push against. */
+.rail--meta { display: flex; flex-direction: column; }
+
+/* --- photo slot ----------------------------------------------------------
+   Nothing renders while the <img> in index.html sits inside its comment. These
+   rules go live the moment that ONE line is uncommented; nothing here changes
+   between the empty and the filled state, and there is deliberately no
+   breakpoint override. */
+.side-photo {
+  display: block;              /* §2's global img rule deliberately has none  */
+  width: 9rem;                 /* 144px, FIXED at every viewport. NOT 100%.
+                                  A percentage width, or a `max-width: none`
+                                  override at a desktop breakpoint, is exactly
+                                  what turned the previous build's photo enable
+                                  into a clipped scroller. 144 < 247, the
+                                  narrowest rail inner, everywhere.           */
+  max-width: 100%;             /* guard for any container under 144px         */
+  height: auto;
+  aspect-ratio: 3 / 4;         /* file is 725x940 = 0.7713 -> ~3% crop, near
+                                  lossless. Reserves the box before decode, so
+                                  enabling the photo causes no layout shift.  */
+  object-fit: cover;
+  object-position: 50% 30%;    /* face-safe if the box ratio ever drifts      */
+  border-radius: var(--radius);/* 2px. NOT 50%: a circle forces a 1:1 crop and
+                                  discards ~23% of a portrait he framed, and
+                                  nothing else on this page is round.         */
+  background: var(--surface);  /* only ever visible during decode             */
+  margin-bottom: var(--s-6);
+}
+/* DO NOT ADD, in any media query: `.side-photo { max-width: none }`,
+   `width: 100%`, `max-height`/`overflow-y` on either rail or on #news-md, or
+   `position: sticky` on anything in this section. Each was a shipped defect. */
+
+/* --- identity block ------------------------------------------------------- */
+.side-lines {
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink-70);           /* 6.31:1 on --card (AA body)               */
+}
+
+.side-links { list-style: none; padding-left: 0; margin: var(--s-4) 0 0; }
+.side-links li + li { margin-top: var(--s-2); }
+
+.side-links a {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  color: var(--accent);           /* 8.39:1 on --card (AAA)                   */
+  text-decoration: underline;     /* resting underline: in a block where every
+                                     line is a link, colour alone would be the
+                                     only cue (WCAG 1.4.1). Same reasoning as
+                                     `.prose a` in §6, opposite of `.pubs a`,
+                                     which has the [brackets] instead.        */
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  text-decoration-color: var(--ink-55);   /* 3.86:1 on --card — clears the 3:1
+                                             non-text floor                   */
+  padding-block: var(--s-1);      /* 24px hit area, as §4 and §7              */
+  transition: color 120ms ease, text-decoration-color 120ms ease;
+}
+.side-links a:hover,
+.side-links a:focus-visible { text-decoration-color: currentColor; }
+
+/* --- news ----------------------------------------------------------------- */
+.side-label { color: var(--ink); margin-bottom: var(--s-4); }  /* 16.55:1 AAA */
+/* Single dash, not a BEM double dash. The visitor-badge block in index.html
+   is meant to stay switchable by wrapping it in an HTML comment, and an HTML
+   comment may not contain the two-hyphen sequence — a `--quiet` in there would
+   break the comment rather than disable the block. */
+.side-label-quiet {
+  color: var(--ink-70);           /* 6.31:1 on --card (AA body)               */
+  margin-bottom: var(--s-2);
+}
+
+/* #news-md deliberately does NOT carry class="prose": `.prose ul`'s 20px
+   padding-left would eat a twelfth of a 247px column, and `.prose > * + *`'s
+   16px rhythm is tuned for 17px serif paragraphs in a 594px measure, not 14px
+   serif lines under a sans date, in a rail. These rules replace it.
+   (Entry TEXT is serif — `.news li` sets no font-family, so it inherits the
+   body face. Only the promoted date below is sans.) */
+.news { overflow-wrap: break-word; }
+.news > * + * { margin-top: var(--s-4); }
+.news ul, .news ol { list-style: none; padding-left: 0; margin: 0; }
+.news li {
+  font-size: var(--fs-small); line-height: 1.45;
+  color: var(--ink);              /* 16.55:1 on --card (AAA)                  */
+}
+.news li + li { margin-top: var(--s-4); }
+
+/* contents/news.md convention: `- **Mon YYYY** Entry text.` The leading bold
+   run is the date and is promoted onto its own line above the text. A fixed
+   leading date COLUMN (al-folio's `width: 20%`) would be 61px inside the
+   307px rail and 49px inside the 247px one — far too narrow for "Jun 2026",
+   which is why the date goes above rather than beside. If a future entry has
+   no leading <strong>, nothing breaks: it just renders as plain text. */
+.news li > strong:first-child {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-70);           /* 6.31:1 on --card (AA body)               */
+  margin-bottom: var(--s-1);
+}
+
+/* Same treatment as `.side-links a` and `.prose a`, spelled out rather than
+   inherited from the UA: colour alone is not a sufficient cue (WCAG 1.4.1),
+   and leaving the underline to the browser drew a full-strength accent
+   underline where every other link family here uses the quieter --ink-55. */
+.news a {
+  color: var(--accent);           /* 8.39:1 on --card (AAA)                   */
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  text-decoration-color: var(--ink-55);   /* 3.86:1 on --card                 */
+  transition: color 120ms ease, text-decoration-color 120ms ease;
+}
+.news a:hover,
+.news a:focus-visible { text-decoration-color: currentColor; }
+
+/* Empty state. Deliberately NOT `#news-md:empty`: per MDN, :empty matches an
+   element containing only comments but does NOT match one containing
+   whitespace (the Selectors L4 change is unimplemented in every browser), and
+   marked passes the file's HTML comment straight through (INV-5) followed by a
+   newline — so #news-md holds a comment node PLUS a text node and :empty
+   silently never fires. `:has()` inherits the same flaw. scripts.js therefore
+   sets data-empty from the rendered string, with comments stripped.
+   Visible by DEFAULT so that pre-JS, no-JS and a failed fetch all still show a
+   sentence rather than a bare heading floating over nothing. */
+.news-empty {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  color: var(--ink-70);           /* 6.31:1 on --card (AA body)               */
+}
+#news-md[data-empty="false"] ~ .news-empty { display: none; }
+
+/* --- visitor badge -------------------------------------------------------
+   The `.side-tracker` block in index.html is LIVE: every page load fetches one
+   180x112 PNG from mapmyvisitors.com. See index.html for what that means for
+   visitors' IP addresses, and README.md "Third-party requests". These rules
+   are written so that deleting or re-commenting that block leaves nothing
+   behind — they simply match nothing.
+   `margin-top: auto` pins the badge to the foot of the band on the grid
+   layout, giving the band a terminating object instead of trailing off into
+   flat tint. When stacked there is no free space, so it resolves to 0 and the
+   padding-top supplies the separation — no media query needed.
+   `.side-tracker[hidden]` is spelled out because the UA's `[hidden]` rule sets
+   `display: none` at a lower cascade origin and can lose to a class selector
+   that sets a display value; scripts.js sets `hidden` when the third-party
+   image fails, and that must actually remove the block. */
+.side-tracker { margin-top: auto; padding-top: var(--s-8); }
+.side-tracker[hidden] { display: none; }
+.side-tracker__link { display: inline-block; text-decoration: none; border-radius: var(--radius); }
+.side-tracker__img  { display: block; width: 180px; max-width: 100%; height: auto; }
+
+
+/* 11 — PRINT ============================================================== */
+
+@media print {
+  /* The one place outside :root allowed to hard-code colour (see the file
+     header). Ratios, computed on #fff the same way as every token above:
+       --ink     #000000  21.00:1 (AAA)
+       --ink-70  #333333  12.63:1 (AAA)
+       --ink-55  #767676   4.54:1 (AA body — the canonical minimum grey)
+       --accent  #000000  21.00:1 (AAA)
+       --surface #F4F6F9   1.08:1  DECORATIVE
+       --rule    #DDDDDD   1.36:1  DECORATIVE
+       --rule-hi #BBBBBB   1.92:1  DECORATIVE — a hair lighter than the 1.53:1
+                                   screen hairline it replaces, because toner
+                                   spreads. NOT a meaningful border.
+       --accent-wash
+                 #DDDDDD   1.36:1  DECORATIVE — ::selection ground only, and
+                                   only on screen-reading a printed preview;
+                                   --ink on it measures 15.46:1 (AAA).
+     All three ramp steps flatten to #fff on purpose: a 400px column of ink
+     down every page wastes a cartridge, and once the grid is `display: block`
+     there is no band left to distinguish. */
+  :root {
+    --shell: #fff; --paper: #fff; --card: #fff;
+    --ink: #000000; --ink-70: #333333; --ink-55: #767676;
+    --accent: #000000; --accent-wash: #DDDDDD;
+    --surface: #F4F6F9; --rule: #DDDDDD; --rule-hi: #BBBBBB;
+  }
+  .masthead__nav { display: none; }
+  .side-tracker  { display: none; }
+  .sheet   { max-width: none; border: 0; min-height: 0; }
+  .layout  { display: block; }
+  .rail    { border: 0; padding-inline: 0; }
+  .content { padding-inline: 0; }
+  .section { max-width: none; }
+  body { font-size: 11pt; }
+  /* `.pubs li { break-inside: avoid }` in §7 already applies when printing.
+     The first two selectors are the ones that set `text-decoration: none`, so a
+     bare `a { text-decoration: underline }` alone would lose to them on
+     specificity and those links would print indistinguishable from the text. */
+  .pubs a, .site-footer a, a { text-decoration: underline; }
+}

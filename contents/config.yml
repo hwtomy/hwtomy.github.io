@@ -1,5 +1,35 @@
+# Every top-level key here must equal an element id in index.html.
+# static/js/scripts.js writes each value into
+# document.getElementById(<key>).innerHTML. A key with no matching id is
+# silently dropped (it only logs to the console); an id with no matching key
+# silently keeps its static fallback. Both are INV-1 failures.
+#
+# The text inside those elements in index.html is a FALLBACK, not a second
+# source of truth — it exists so that crawlers, link-preview bots, curl and the
+# <noscript> state see a title, an accessible link name and non-empty headings.
+# EACH FALLBACK MUST BE BYTE-IDENTICAL TO THE VALUE HERE, or the tab title (and
+# the name, and the headings) change the moment JavaScript runs.
+#
+# The set is CLOSED both ways: every id in index.html ending in `-subtitle` has
+# a key here, and every key here has an element. Adding a section means adding
+# its `<name>-subtitle` key too — see README.md, "Adding a section".
+#
+# Two ids in index.html look config-shaped but deliberately have NO key here:
+# `#github-link` and `#license-link` in the footer. They are inert hooks left
+# from the upstream Bootstrap template; nothing in main.css or scripts.js
+# selects them, and the link text is structural markup, not content. Leave them
+# keyless or delete the ids — do not add keys "for symmetry", which would put
+# two more strings on the byte-identity checklist for no gain.
+#
+# YAML note, so nobody "fixes" it wrongly: `title` is unquoted and contains an
+# apostrophe. That is valid — a single quote only opens a quoted scalar when it
+# is the FIRST character of the value — and js-yaml parses it to the literal
+# string. Do not add quotes; if someone does, they must be DOUBLE quotes, and
+# the fallback in index.html must not change.
 title: Tiou Wang's Homepage
 page-top-title: Tiou Wang
-# top-section-bg-text: Computer Science
 home-subtitle: Tiou Wang
+about-subtitle: About
+publications-subtitle: Publications
+news-subtitle: News
 copyright-text: '&copy; Tiou Wang 2026. All Rights Reserved.'

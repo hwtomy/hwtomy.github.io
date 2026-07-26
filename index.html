@@ -4,42 +4,79 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="description" content="Academic Webpage" />
-    <meta name="author" content="hwtomy" />
-    <title id="title"></title>
+    <meta name="color-scheme" content="light dark" />
+    <!-- Mobile browser chrome. Values are the `paper` token from main.css §1 —
+         #EAF0F8 in light, #11151C in dark; they are the one place a colour is
+         duplicated outside that block, because <meta> cannot read a custom
+         property. Change them together with that token. -->
+    <meta name="theme-color" content="#EAF0F8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#11151C" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Academic homepage of Tiou Wang — KTH Royal Institute of Technology, Stockholm. Research in signal-processing-inspired neural network architectures and representation learning." />
+    <meta name="author" content="Tiou Wang" />
+    <!-- The text inside the SEVEN config-driven elements (#title,
+         #page-top-title, #home-subtitle, #about-subtitle,
+         #publications-subtitle, #news-subtitle, #copyright-text) is a
+         FALLBACK, not a second source of truth: scripts.js overwrites it with
+         the value from contents/config.yml. It exists so the served HTML has a
+         title, an accessible link name and non-empty headings for consumers
+         that never run the script — link-preview bots, crawlers, curl, and the
+         noscript state below.
+         Each fallback must be BYTE-IDENTICAL to the value of the matching key
+         in contents/config.yml, or the tab title (and the name, and the
+         headings) changes the moment JavaScript runs. -->
+    <title id="title">Tiou Wang's Homepage</title>
 
     <!-- Icon -->
     <link rel="icon" type="image/x-icon" href="static/assets/favicon.ico" />
 
-    <!-- Bootstrap icons-->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <!-- Webfonts. TWO families, and both are justified in main.css §1:
+         Source Serif 4 (variable, opsz + wght 400..600) for prose, publication
+         entries and the display name; Inter (variable, wght 400..600) for the
+         masthead, nav, section labels, news dates and the rail's furniture.
+         Only the weights actually used are requested — 400 (the rail's
+         affiliation and link text, the footer, the noscript note, the empty-
+         news line, the [arXiv]/[Project] links) and 600 (brand, nav, labels,
+         news dates). The ranges must COVER those values: an earlier revision
+         asked for `Inter:wght@500..600`, which Google serves with the
+         descriptor `font-weight: 500 600`, so every 400 rule above was clamped
+         up to 500 and rendered a weight heavier than this stylesheet declares.
+         If a rule ever needs a weight outside a range here, widen the range —
+         the clamp is silent. ITALICS ARE NOT
+         REQUESTED: neither .md file contains any, and main.css §7 deliberately
+         does not italicise publication venues. If a future .md needs italics,
+         add `ital,` to BOTH axis lists in the URL below — the alternative is a
+         browser-synthesised oblique, which looks wrong and would go unnoticed.
 
-    <!-- Google fonts-->
-    <link rel="preconnect" href="https://fonts.gstatic.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,600;1,600&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,300;0,500;0,600;0,700;1,300;1,500;1,600;1,700&amp;display=swap"
-        rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,400;1,400&amp;display=swap"
-        rel="stylesheet" />
+         Loaded NON-RENDER-BLOCKING via the media="print" swap. A plain
+         <link rel="stylesheet"> to fonts.googleapis.com blocks first paint
+         until it resolves, and for the site owner, in China, that host does
+         not resolve at all — a blocking link would hold the page white for the
+         length of a TCP timeout. This form lets the page paint immediately in
+         the fallback stacks and upgrade if the stylesheet ever arrives.
+         There is deliberately NO <noscript> copy of the link: reinstating a
+         render-blocking font request is not worth it for a page that already
+         needs JavaScript for its content, and the fallback stacks are complete
+         faces, not substitutes. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" media="print" onload="this.media='all'"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400..600&family=Source+Serif+4:opsz,wght@8..60,400..600&display=swap">
 
-    <!-- Core theme CSS (includes Bootstrap)-->
-    <link type="text/css" href="static/css/styles.css" rel="stylesheet" />
+    <!-- Styles -->
     <link type="text/css" href="static/css/main.css" rel="stylesheet" />
 
-    <!-- Bootstrap core JS-->
-    <script type="text/javascript" src="static/js/bootstrap.bundle.min.js"></script>
-
-    <!-- For Compatability -->
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    
-    <!-- Markdown -->
-    <script type="text/javascript" src="static/js/marked.min.js"></script>
-
-    <!-- Mathematics -->
+    <!-- Mathematics.
+         Only the CONFIG is inline here. The ~1 MB MathJax bundle itself is NOT
+         requested up front: scripts.js scans the rendered markdown for TeX
+         delimiters and injects the CDN tag only if a section actually contains
+         math. Today neither .md file does, so MathJax is never fetched.
+         (The page does make other third-party requests now, both on every
+         load: the two Google Fonts families above and the visitor badge in the
+         sidebar. See README.md, "Third-party requests".)
+         Writing $...$ in any contents/*.md turns math back on with no edit
+         here. This object must stay defined before that injection happens.
+         See https://docs.mathjax.org/en/latest/index.html for the options. -->
     <script>
-        // See https://docs.mathjax.org/en/latest/index.html for more details.
         MathJax = {
             tex: {
                 packages: {},              // extensions to use
@@ -51,7 +88,9 @@
                     ['$$', '$$'],
                     ['\\[', '\\]']
                 ],
-                processEscapes: false,      // use \$ to produce a literal dollar sign
+                processEscapes: false,     // \$ is NOT honoured as a literal dollar sign.
+                                           // (The template's comment here claimed the
+                                           //  opposite; the value has always been false.)
                 processEnvironments: true, // process \begin{xxx}...\end{xxx} outside math mode
                 processRefs: true,         // process \ref{...} outside of math mode
                 digits: /^(?:[0-9]+(?:\{,\}[0-9]{3})*(?:\.[0-9]*)?|\.[0-9]+)/,    // pattern for recognizing numbers
@@ -65,109 +104,312 @@
                 // (document.getElementsByTagName('base').length === 0) ? '' : String(document.location).replace(/#.*$/, ''),
                 formatError:               // function called when TeX syntax errors occur
                     (jax, err) => jax.formatError(err)
+            },
+            options: {
+                // The News band is never mathematics, and it is protected in
+                // TWO places that are halves of one job — neither is
+                // sufficient alone:
+                //   `data-nomath` on #news-md keeps News out of the SCAN in
+                //   scripts.js, i.e. News can never be the REASON the bundle
+                //   is fetched;
+                //   `ignoreHtmlClass` below keeps MathJax from TYPESETTING
+                //   News if some OTHER section pulls the bundle in, because
+                //   MathJax 3 typesets the whole document at startup. Without
+                //   it, a news entry reading "a $50,000 grant and a $2M award"
+                //   would silently become an equation the first time home.md
+                //   or publications.md contained TeX.
+                // Matching is on whole class names, so `.news-empty` is
+                // unaffected. `news` is the class on #news-md.
+                ignoreHtmlClass: 'news'
             }
         };
     </script>
-    <script type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-    <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    
-    <!-- Core JS-->
-    <script type="text/javascript" src="static/js/scripts.js"></script>
-    <script type="text/javascript" src="static/js/js-yaml.min.js"></script>
+    <!-- Core JS. All three are `defer`red: ~97 KB of parser-blocking script in
+         <head> delayed first paint of the masthead and the fallback name for no
+         reason. Deferred scripts still execute in document order and still run
+         before DOMContentLoaded, which is the only thing scripts.js waits on. -->
+    <script type="text/javascript" src="static/js/marked.min.js" defer></script>
+    <script type="text/javascript" src="static/js/js-yaml.min.js" defer></script>
+    <script type="text/javascript" src="static/js/scripts.js" defer></script>
 
 </head>
 
 <body id="page-top">
-    <!-- Navigation-->
-    <nav class="header navbar navbar-expand-lg navbar-light fixed-top shadow-sm" id="mainNav">
-        <div class="container px-5">
-            <a id="page-top-title" class="navbar-brand fw-bold" href="#page-top"></a>
-            <!-- <a href="#page-top"><img src="static/assets/img/CUMT_LOGO.svg" style="width: 11rem;"></a> -->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive"
-                aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
-                MENU
-                <i class="bi-list"></i>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarResponsive">
-                <ul class="navbar-nav ms-auto me-4 my-3 my-lg-0 gap-2">
-                    <li class="nav-item">
-                        <a class="nav-link me-lg-3" href="#page-top">HOME</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link me-lg-3" href="#publications">PUBLICATIONS</a>
-                    </li>
-                </ul>
 
-                <!-- CV button (outside UL to avoid overlap on mid-width screens) -->
-            <div class="d-flex ms-lg-2 mt-2 mt-lg-0">
-                <a class="btn btn-dark btn-sm rounded-pill px-3"
-                href="./contents/TiouWang_CV.pdf"
-                download>
-                    <i class="bi bi-download"></i>
-                    &nbsp;Download CV
+<!-- THE SHEET. A centred 1440px page on a slightly darker shell, with hairline
+     left/right borders so it reads as a sheet rather than as a centred column.
+     Masthead, the two-column grid and the footer all live inside it, which is
+     why the masthead rule, the rail's tint and the footer rule share both
+     vertical edges at every width with no capping rule and no media query. -->
+<div class="sheet">
+
+    <header class="masthead">
+        <div class="container">
+            <a class="masthead__brand" id="page-top-title" href="#page-top">Tiou Wang</a>
+            <nav class="masthead__nav" aria-label="Primary">
+                <a href="#page-top">Home</a>
+                <a href="#publications">Publications</a>
+                <a href="./contents/TiouWang_CV.pdf" download>CV (PDF)</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- <main> IS the grid. THREE direct children = three grid regions.
+         DOM order is rail-id, content, rail-meta, and that order is also the
+         reading order and the tab order at EVERY width: no `order:` property
+         and no reversed flex direction is used anywhere in the stylesheet,
+         deliberately. The identity block therefore leads the document, so the
+         first screen of a phone is the person and the empty News band is the
+         last thing on the page.
+         The one place visual order differs from DOM order is at >=60rem, where
+         rail-meta is drawn in the LEFT column beside the middle of the
+         article although it comes after the whole article in source. It is a
+         labelled complementary landmark, so screen-reader users reach News by
+         landmark in one keystroke, and the linear sequence (name, work, news)
+         stays coherent.
+
+         THE IDENTITY RAIL IS A PLAIN <div>, NOT AN <aside>. It holds the
+         document's only <h1>, and <aside> maps to role="complementary" — i.e.
+         tangential content — wherever it sits, which would file the page's
+         subject outside <main> and leave the main landmark with no top-level
+         heading. The person is not tangential to this page. It needs no
+         landmark of its own, and both rail classes are class selectors, so the
+         element name carries no styling. The News rail stays an <aside>,
+         because News genuinely IS complementary.
+         (Note the house rule visible throughout this file: an HTML comment may
+         not contain a two-hyphen sequence, so CSS custom properties and BEM
+         modifiers are referred to by name here, never written literally.)
+
+         ANY NEW SECTION GOES INSIDE <div class="content">, never as a direct
+         child of <main>: a direct child becomes a fourth grid item and lands
+         in the sidebar column. See README.md, "Adding a section". -->
+    <main class="layout">
+
+        <div class="rail rail--id">
+
+            <!-- PHOTO SLOT. Ships EMPTY on purpose and renders nothing at all:
+                 no box, no outline, no placeholder, no monogram.
+                 TO SHOW THE PORTRAIT: on the next line, delete the opening
+                 comment marker at its start and the closing comment marker at
+                 its end, leaving the <img> tag itself. That is the whole
+                 change: ONE LINE, one file. No CSS, no JS, no config edit,
+                 nothing else moves.
+                 The file is already on disk (725x940). To use a different
+                 picture, overwrite that same path with a PORTRAIT image,
+                 roughly 3:4, at least 600px wide, and update width/height. The
+                 slot is 144px wide at every viewport, aspect-ratio 3/4,
+                 cropped with object-fit:cover and object-position 50% 30%
+                 (face-safe). See main.css §10, .side-photo.
+                 A commented-out <img> issues no network request, so the slot
+                 costs nothing while it is empty.
+                 alt IS DELIBERATELY EMPTY. The <h1> directly below the image
+                 already names the person, so a portrait carrying alt="Tiou
+                 Wang" would make a screen reader announce the name twice in a
+                 row. An empty alt marks it decorative, which is what a profile
+                 photo beside its own caption is. -->
+            <!-- <img class="side-photo" src="./static/assets/img/photo.png" alt="" width="725" height="940" decoding="async"> -->
+
+            <h1 class="name" id="home-subtitle">Tiou Wang</h1>
+
+            <!-- These three lines and the Email link restate facts that also
+                 appear in contents/home.md. The rail is the identity block and
+                 carries them by design. If the owner would rather the
+                 duplication went away, README.md's update table has the single
+                 edit that removes it; there is nothing to keep in sync here. -->
+            <p class="side-lines">
+                Ph.D. Student<br />
+                KTH Royal Institute of Technology<br />
+                Stockholm, Sweden
+            </p>
+
+            <!-- role="list" is asserted BY HAND here: this list is static
+                 markup, so the re-assertion scripts.js performs on injected
+                 markdown never reaches it, and `list-style: none` drops the
+                 implicit role in WebKit. -->
+            <ul class="side-links" role="list">
+                <li><a href="mailto:tiou@kth.se">Email</a></li>
+                <li><a href="./contents/TiouWang_CV.pdf" download>CV&nbsp;(PDF)</a></li>
+                <li><a href="https://github.com/hwtomy">GitHub</a></li>
+                <!-- Add later; no CSS change needed:
+                <li><a href="">Google Scholar</a></li>
+                <li><a href="">ORCID</a></li>
+                -->
+            </ul>
+
+        </div>
+
+        <div class="content">
+
+            <!-- Every section below is filled in by scripts.js at load time, so
+                 with JavaScript disabled the page body would otherwise be
+                 empty. Rather than duplicate the bio here (two copies would
+                 drift apart), point at the sources, which are plain text and
+                 readable as-is. The links in the rail above still work without
+                 JavaScript. -->
+            <noscript>
+                <section class="section">
+                    <p class="noscript-note">
+                        This page renders its content with JavaScript. With JavaScript disabled you can
+                        read the source of it on GitHub, which renders markdown server-side:
+                        <a href="https://github.com/hwtomy/hwtomy.github.io/blob/main/contents/home.md">about</a>,
+                        <a href="https://github.com/hwtomy/hwtomy.github.io/blob/main/contents/publications.md">publications</a>,
+                        <a href="https://github.com/hwtomy/hwtomy.github.io/blob/main/contents/news.md">news</a>,
+                        or download the
+                        <a href="./contents/TiouWang_CV.pdf">CV&nbsp;(PDF)</a>.
+                    </p>
+                </section>
+            </noscript>
+
+            <section class="section" id="home">
+                <h2 class="section-label" id="about-subtitle">About</h2>
+                <div class="prose" id="home-md"></div>
+            </section>
+
+            <section class="section" id="publications">
+                <h2 class="section-label" id="publications-subtitle">Publications</h2>
+                <div class="prose pubs" id="publications-md"></div>
+            </section>
+
+        </div>
+
+        <aside class="rail rail--meta" aria-label="News and visitors">
+
+            <!-- NEWS — INV-2 requires ALL THREE of: contents/news.md (which
+                 must EXIST even while empty, or the fetch 404s), the
+                 <div id="news-md"> below, and 'news' in section_names in
+                 static/js/scripts.js. Any one missing fails SILENTLY.
+                 "EXIST" MEANS COMMITTED, NOT JUST PRESENT LOCALLY. GitHub Pages
+                 serves only what is in the repository, so while
+                 contents/news.md is untracked the deployed site 404s on that
+                 fetch, the console logs it, and #news-md silently stays empty —
+                 and the GitHub link to news.md in the noscript note below 404s
+                 as well. It degrades to exactly the appearance of an empty
+                 file, because the empty-state line further down is visible by
+                 default, which is why it is easy to miss. Commit the file.
+                 <h2>, not <h3>: a sibling of the About and Publications <h2>s
+                 under one <h1>, which is now the first heading in the
+                 document.
+                 data-nomath keeps this block out of the TeX SCAN in
+                 scripts.js; the MathJax `ignoreHtmlClass: 'news'` option above
+                 is the other half. Both are needed; neither alone is
+                 sufficient. -->
+            <section id="news">
+                <h2 class="side-label" id="news-subtitle">News</h2>
+                <div class="news" id="news-md" data-nomath></div>
+                <!-- Visible by DEFAULT, so the empty state is also the correct
+                     state before JS runs, with JS off, and if the fetch fails.
+                     scripts.js sets data-empty="false" on #news-md once real
+                     content lands, and the CSS sibling rule then hides this. -->
+                <p class="news-empty">No updates yet.</p>
+            </section>
+
+            <!-- =============================================================
+                 VISITOR TRACKING — mapmyvisitors.com. THIS IS LIVE.
+
+                 The block below is active, so every page load fetches one
+                 image from mapmyvisitors.com and the counter records the hit.
+                 TO SWITCH IT OFF: wrap the <div class="side-tracker"> block in
+                 an HTML comment, or delete it outright — nothing else depends
+                 on it. main.css §10 styles .side-tracker and
+                 static/js/scripts.js carries the handler that hides the block
+                 if the image fails, and both are harmless when it is absent.
+
+                 KNOW WHAT THIS IS. It is a THIRD-PARTY TRACKER. Every
+                 visitor's browser fetches this image from mapmyvisitors.com,
+                 so mapmyvisitors receives every visitor's IP ADDRESS, and the
+                 response was observed to carry a `set-cookie: PHPSESSID`
+                 header, i.e. it also sets a third-party cookie where the
+                 browser allows one. In an EU/Swedish context that is
+                 non-essential processing of the kind that normally requires a
+                 consent notice BEFORE it happens. Stated as a fact to weigh;
+                 no consent banner is shipped, because none was asked for.
+                 This, together with the two Google Fonts families in <head>,
+                 is what the site's former zero-external-request property was
+                 spent on.
+
+                 WHY THE STATIC IMAGE AND NOT THE map.js WIDGET: the widget
+                 loads jQuery 1.12.4 from a fourth host, eval()s a JSONP
+                 response, and injects its own stylesheet containing a
+                 saturated red gradient button with a green hover, which
+                 cannot be overridden safely and contradicts this page's
+                 palette. With w=a it also skips its own 180..300px clamp and
+                 writes a fixed pixel width taken from the parent at load time
+                 (704px at a 768px viewport), and it reserves a 139px
+                 min-height hole. The static badge is one 180x112 PNG from one
+                 host, with a known size that cannot overflow the rail.
+
+                 COLOURS: co is the map background, cl the land, ct the text.
+                 The owner's snippet used cl=ffffff with no co, which renders
+                 69% of the badge as saturated #2D78AD — the most saturated
+                 area anywhere on this page. The values below are the page's
+                 own card and accent tokens per colour scheme, verified by
+                 fetching each URL and counting pixels: the ground is EXACTLY
+                 #F6F9FD in light and EXACTLY #222A36 in dark (the `card` token
+                 per scheme) over about 65% of the image, with #0F4C81 /
+                 #93BEEA (the `accent` token) as land and text. Change either
+                 token in main.css and change these two URLs with it.
+                 (Token names are written bare here, without their leading
+                 dashes, for the same reason the class below uses a single
+                 dash: an HTML comment may not contain a two-hyphen sequence,
+                 and this block has to stay safe to wrap in one.)
+                 Pixel COUNTS are deliberately not quoted: `cf-cache-status:
+                 BYPASS` and no `cache-control` mean the PNG is regenerated per
+                 request, so the visitor markers — and therefore every exact
+                 count — differ between two fetches a second apart. Only the
+                 colours and the 180x112 size are stable.
+                 HONEST RESIDUE, two items no documented parameter recolours:
+                 398 px (1.97%, stable across fetches) of baked-in pure white —
+                 the plus/minus zoom glyphs, bottom left, invisible in light and
+                 two small white squares in dark — and a handful of red visitor-
+                 marker pixels, measured at 9 px on one fetch and 5 px on
+                 another, i.e. about 0.03% of the image. A few pixels is not the
+                 "garish red/green/blue" the palette rule is about, but it is
+                 third-party output, so it is recorded rather than glossed.
+
+                 loading="lazy" is deliberately NOT used: the badge sits at the
+                 foot of the rail, below the fold on a laptop, so lazy loading
+                 would count only visitors who scroll to the bottom.
+                 fetchpriority="low" plus decoding="async" gets the performance
+                 property without breaking the feature.
+
+                 `side-label-quiet` is a SINGLE dash, not the BEM double dash,
+                 so that this whole block stays safe to wrap in an HTML comment
+                 again: a comment may not contain the two-hyphen sequence.
+                 ============================================================= -->
+            <div class="side-tracker">
+                <p class="side-label side-label-quiet">Visitors</p>
+                <a class="side-tracker__link"
+                   href="https://mapmyvisitors.com/web/1c6v1"
+                   rel="nofollow noopener">
+                    <picture>
+                        <source media="(prefers-color-scheme: dark)"
+                                srcset="https://mapmyvisitors.com/map.png?d=DybL2l3KzPNb8Gia2zs8ZlXeByh19dKQCWvkPrzEffI&amp;co=222A36&amp;cl=93BEEA&amp;ct=93BEEA">
+                        <img class="side-tracker__img"
+                             src="https://mapmyvisitors.com/map.png?d=DybL2l3KzPNb8Gia2zs8ZlXeByh19dKQCWvkPrzEffI&amp;co=F6F9FD&amp;cl=0F4C81&amp;ct=0F4C81"
+                             alt="World map of recent visitor locations"
+                             width="180" height="112"
+                             decoding="async" fetchpriority="low"
+                             referrerpolicy="strict-origin-when-cross-origin">
+                    </picture>
                 </a>
             </div>
-</div>
-        </div>
-    </nav>
 
-    <!-- Top Section -->
-    <section class="top-section" style="background-image: url('static/assets/img/background.jpeg');">
-        <div class="top-section-content">
-            <div class="container px-5">
-                <h2 id="top-section-bg-text" class="text-white display-3 lh-1 font-alt"></h2>
-            </div>
-        </div>
-    </section>
-    <!-- Top Section -->
+        </aside>
 
-    <!-- Photo -->
-    <div class="container px-5">
-        <div id="avatar">
-            <img class="shadow" src="static/assets/img/photo.png">
-        </div>
-    </div>
-    <!-- Photo -->
-    
-    <!-- Home -->
-    <section class="bg-gradient-primary-to-secondary-light mt5 md5" id="home">
-        <div class="container px-5">
-            <header>
-                <h2 id="home-subtitle"> </h2>
-                <!-- <span class="bi bi-list"></span> -->
-            </header>
-            <div class="main-body" id="home-md"></div>
-        </div>
-    </section>
-    <!-- Home -->
+    </main>
 
-    <!-- Publications -->
-    <section class="bg-gradient-primary-to-secondary-gray mt5 md5" id="publications">
-        <div class="container px-5">
-            <header>
-                <h2 id="publications-subtitle"><i class="bi bi-file-text-fill"></i>&nbsp;PUBLICATIONS</h2>
-            </header>
-            <div class="main-body" id="publications-md"></div>
-
-        </div>
-    </section>
-    <!-- Publications  -->
-
-
-    <!-- Awards -->
-
-
-    <!-- Footer-->
-    <footer class="bg-bottom text-center py-5">
-        <div class="container px-5">
-            <div class="text-white-50 small">
-                <div id="copyright-text" class="mb-2"></div>
-                <a id="github-link" href="https://github.com/hwtomy">Github</a>
-                <span class="mx-1">&middot;</span>
+    <footer class="site-footer">
+        <div class="container">
+            <p id="copyright-text">&copy; Tiou Wang 2026. All Rights Reserved.</p>
+            <p class="site-footer__links">
+                <a id="github-link" href="https://github.com/hwtomy">GitHub</a>
+                <span class="sep" aria-hidden="true">&middot;</span>
                 <a id="license-link" href="https://github.com/hwtomy/hwtomy.github.io/blob/main/LICENSE">License</a>
-            </div>
+            </p>
         </div>
     </footer>
+
+</div><!-- /.sheet -->
 
 </body>
 
