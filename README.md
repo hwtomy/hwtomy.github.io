@@ -112,7 +112,7 @@ was the only external image reference the content files ever had. Do not restore
 | Bio, contact, education, research interests | `contents/home.md` |
 | Publication list | `contents/publications.md` |
 | News entries | `contents/news.md` (rendered into the sidebar) |
-| The portrait | `static/assets/img/photo.png`; the slot is switched on by uncommenting **one line** in `index.html`, inside `<div class="rail rail--id">` |
+| The avatar | Replace `static/assets/img/avatar.jpg` and update its width/height in `index.html` and aspect ratio in `.side-photo` if the image proportions change. It appears above the name in the identity rail. |
 | Browser tab title, header name, page headings, copyright | `contents/config.yml` — seven keys, one per element id |
 | CV linked from the nav and the sidebar | replace `contents/TiouWang_CV.pdf` |
 | Layout, navigation links, page structure | `index.html` |
@@ -201,8 +201,7 @@ requests* above for exactly what each one degrades to.
 └── static/
     ├── assets/
     │   ├── favicon.ico
-    │   └── img/photo.png           the portrait; the slot is empty until you
-    │                               uncomment one line in index.html
+    │   └── img/avatar.jpg          the active profile avatar
     ├── css/main.css                the entire stylesheet
     └── js/
         ├── js-yaml.min.js          vendored

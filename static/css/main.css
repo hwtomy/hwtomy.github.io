@@ -383,7 +383,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* The only <img> the page can ship is the sidebar portrait (commented out)
+/* The only <img> the page can ship is the sidebar avatar
    and the visitor badge; both get explicit rules in §10. NO display:block
    here — an image a future .md puts inside a paragraph must stay inline. */
 img { max-width: 100%; height: auto; }
@@ -987,30 +987,16 @@ section[id] { scroll-margin-top: var(--s-8); }
 /* margin-top:auto on .side-tracker needs a flex column to push against. */
 .rail--meta { display: flex; flex-direction: column; }
 
-/* --- photo slot ----------------------------------------------------------
-   Nothing renders while the <img> in index.html sits inside its comment. These
-   rules go live the moment that ONE line is uncommented; nothing here changes
-   between the empty and the filled state, and there is deliberately no
-   breakpoint override. */
+/* --- profile avatar ------------------------------------------------------
+   Keep the original image proportions and a compact width on every screen. */
 .side-photo {
-  display: block;              /* §2's global img rule deliberately has none  */
-  width: 9rem;                 /* 144px, FIXED at every viewport. NOT 100%.
-                                  A percentage width, or a `max-width: none`
-                                  override at a desktop breakpoint, is exactly
-                                  what turned the previous build's photo enable
-                                  into a clipped scroller. 144 < 247, the
-                                  narrowest rail inner, everywhere.           */
-  max-width: 100%;             /* guard for any container under 144px         */
+  display: block;
+  width: 9rem;
+  max-width: 100%;
   height: auto;
-  aspect-ratio: 3 / 4;         /* file is 725x940 = 0.7713 -> ~3% crop, near
-                                  lossless. Reserves the box before decode, so
-                                  enabling the photo causes no layout shift.  */
-  object-fit: cover;
-  object-position: 50% 30%;    /* face-safe if the box ratio ever drifts      */
-  border-radius: var(--radius);/* 2px. NOT 50%: a circle forces a 1:1 crop and
-                                  discards ~23% of a portrait he framed, and
-                                  nothing else on this page is round.         */
-  background: var(--surface);  /* only ever visible during decode             */
+  aspect-ratio: 1122 / 1402;
+  border-radius: var(--radius);
+  background: var(--surface);
   margin-bottom: var(--s-6);
 }
 /* DO NOT ADD, in any media query: `.side-photo { max-width: none }`,

@@ -187,27 +187,8 @@
 
         <div class="rail rail--id">
 
-            <!-- PHOTO SLOT. Ships EMPTY on purpose and renders nothing at all:
-                 no box, no outline, no placeholder, no monogram.
-                 TO SHOW THE PORTRAIT: on the next line, delete the opening
-                 comment marker at its start and the closing comment marker at
-                 its end, leaving the <img> tag itself. That is the whole
-                 change: ONE LINE, one file. No CSS, no JS, no config edit,
-                 nothing else moves.
-                 The file is already on disk (725x940). To use a different
-                 picture, overwrite that same path with a PORTRAIT image,
-                 roughly 3:4, at least 600px wide, and update width/height. The
-                 slot is 144px wide at every viewport, aspect-ratio 3/4,
-                 cropped with object-fit:cover and object-position 50% 30%
-                 (face-safe). See main.css §10, .side-photo.
-                 A commented-out <img> issues no network request, so the slot
-                 costs nothing while it is empty.
-                 alt IS DELIBERATELY EMPTY. The <h1> directly below the image
-                 already names the person, so a portrait carrying alt="Tiou
-                 Wang" would make a screen reader announce the name twice in a
-                 row. An empty alt marks it decorative, which is what a profile
-                 photo beside its own caption is. -->
-            <!-- <img class="side-photo" src="./static/assets/img/photo.png" alt="" width="725" height="940" decoding="async"> -->
+            <!-- Decorative avatar; the heading below identifies the owner. -->
+            <img class="side-photo" src="./static/assets/img/avatar.jpg" alt="" width="1122" height="1402" decoding="async">
 
             <h1 class="name" id="home-subtitle">Tiou Wang</h1>
 
